@@ -41,6 +41,8 @@ a{color:var(--accent)}.pill{font-size:11px;padding:1px 7px;border-radius:9px;bac
 .bud{display:grid;grid-template-columns:105px minmax(60px,1fr) 115px;gap:8px;align-items:center;font-size:13px;margin:4px 0;cursor:pointer}
 .bar{display:block;height:10px;background:var(--hl);border-radius:5px;overflow:hidden}.bar i{display:block;height:100%}
 .cmp{font-size:12px;color:var(--mute)}
+.pace{display:grid;grid-template-columns:160px minmax(60px,1fr) 190px;gap:8px;align-items:center;font-size:13px;margin:5px 0}
+.pace .bar{position:relative;overflow:visible}.pace .bar i{border-radius:5px}.pace .bar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.6}
 th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--ink)}
 </style>
 </head>
@@ -48,6 +50,11 @@ th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--ink)}
 <main>
 <h1>Where the money went</h1>
 <div class="sub" id="subt"></div>
+<div class="chartbox" id="paceBox">
+  <div class="ptitle">This month — on track? <span class="cmp" id="paceNote"></span></div>
+  <div class="ptotal" id="paceHead"></div><div class="cmp" id="paceSub" style="margin-bottom:8px"></div>
+  <div id="paceRows"></div>
+</div>
 <div class="chartbox" id="period">
   <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center">
     <div class="tabs"><button data-p="week">Weekly</button><button data-p="month" class="on">Monthly</button><button data-p="year">Yearly</button></div>
@@ -121,6 +128,17 @@ th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--ink)}
 const D=/*DATA*/;
 const C=D.cfg; // personal labels, budgets and plan: personal.py DASHBOARD
 const E=n=>(D.icons&&D.icons[n]?D.icons[n]+' ':'')+n; // display label with emoji (categorize.py ICONS)
+function paceCard(){ // month-to-date projection, computed by pace.py at build time
+  const p=D.pace;if(!p){paceBox.style.display='none';return}
+  const fm=x=>Math.round(x).toLocaleString('en'),over=p.projected-p.budget;
+  paceNote.textContent=`${p.month} · day ${p.day}/${p.days} · bar = spent, line = where you should be today`;
+  paceHead.innerHTML=`Heading for <span style="color:${over>0?'var(--bad)':'var(--good)'}">${fm(p.projected)}</span> of ${fm(p.budget)} SAR`+(over>0?` · ${fm(over)} over`:` · ${fm(-over)} under`);
+  paceSub.textContent=`Everyday spending left: ${fm(p.daily_left)} SAR → ${fm(p.per_day_left)} SAR/day for ${p.days_left} days (fixed costs counted at budget; travel & one-offs as spent)`;
+  paceRows.innerHTML=p.groups.filter(x=>x.kind!=='fixed'||!x.on_track).sort((a,b)=>(a.budget-a.projected)-(b.budget-b.projected)).map(x=>{
+    const w=Math.min(100,x.budget?100*x.spent/x.budget:(x.spent>0?100:0)),m=Math.min(100,100*p.day/p.days),c=x.on_track?'var(--good)':'var(--bad)';
+    const tail=x.kind==='lumpy'?`/ ${fm(x.budget)} · ${fm(x.budget-x.spent)} left`:`→ ${fm(x.projected)} / ${fm(x.budget)}`;
+    return `<div class="pace"><span>${E(x.group)}</span><span class="bar"><i style="width:${w}%;background:${c}"></i>${x.kind==='daily'?`<b style="left:${m}%"></b>`:''}</span><span style="text-align:right;color:${c}">${fm(x.spent)} ${tail}</span></div>`}).join('');
+}
 subt.textContent=C.subtitle;catWin.textContent=`(${C.window})`;optRentL.textContent=C.rent.toggle;optOneL.textContent=C.one_off_toggle;
 const COL={"Rent":"#B3B2AA","Loans":"#75746E",[C.spouse]:"#D4537E","Travel":"#378ADD","Shopping":"#D85A30","Food":"#EF9F27","Life admin":"#1D9E75","People & giving":"#7F77DD","Fun":"#ED93B1","One-offs":"#E24B4A","Unknown":"#5F5E5A"};
 const GROUPS=Object.keys(COL);
@@ -233,6 +251,7 @@ function pfilter(g,s,e){sel={grp:g,cat:null,mer:null,month:'',from:s,to:e};mo.va
 function step(n){const a=new Date(P.anchor);if(P.mode==='week')a.setDate(a.getDate()+7*n);else if(P.mode==='month')a.setMonth(a.getMonth()+n);else a.setFullYear(a.getFullYear()+n);P.anchor=a;period();}
 prev.onclick=()=>step(-1);next.onclick=()=>step(1);optSpreadP.onchange=period;
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));P.mode=b.dataset.p;period();});
+paceCard();
 period();
 
 // ---------- Categories table: enable/disable + total / monthly / yearly ----------

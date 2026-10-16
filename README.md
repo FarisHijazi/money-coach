@@ -49,7 +49,8 @@ creates the matching Authentik public client. In claude.ai: add a custom connect
 `https://money.example.com/mcp` and, under advanced settings, that OAuth Client ID (no secret).
 Route `/.well-known/` around the auth proxy too.
 
-**MCP tools:** `status` (data freshness), `weekly_check`, `month_summary(month)`,
+**MCP tools:** `status` (data freshness), `weekly_check`, `month_pace` (this month: spent vs budget,
+projected month-end, SAR/day left), `month_summary(month)`,
 `search_transactions(text, month, category, min_amount, limit)`, `unparsed_sms(limit)`.
 For example, with Claude Code:
 
@@ -92,7 +93,7 @@ cd analyzer && python3 pipeline.py && python3 weekly_check.py
 | 3. Reconcile (only with all 5 statement CSVs) | `reconcile.py` | `statements/*.csv`, `ledger.csv` | `flows.csv` + monthly totals |
 | 4. Categorize | `categorize.py` | `ledger.csv` | `categorized.csv`, `summary.json` |
 | 5. Dashboard | `build_dashboard.py` | `categorized.csv`, `flows.csv`, `dashboard_template.html` | `dashboard.html` |
-| 6. Weekly check | `weekly_check.py` | `ledger.csv` | prints last Sun–Sat week vs budget + "safe to spend" |
+| 6. Weekly check | `weekly_check.py` | `ledger.csv`, `categorized.csv` | prints last Sun–Sat week vs budget, "safe to spend", and `pace.py`'s month projection |
 
 `pipeline.py` runs 1, 3, 4 and 5. Files live in `$MONEY_DATA` (default: `analyzer/`).
 

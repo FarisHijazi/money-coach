@@ -8,23 +8,10 @@ import os
 import re
 import urllib.parse as up
 
-from categorize import ICONS
+import pace
+from categorize import GROUP, ICONS
 from config import CODE, DATA, P
 
-GROUP = {
-    "Rent": "Rent", "Loans": "Loans",
-    P.SPOUSE_LABEL: P.SPOUSE_GROUP,
-    "Travel": "Travel",
-    "Online shopping": "Shopping", "Home & furniture": "Shopping", "Clothes & beauty": "Shopping",
-    "Home lab / gadgets": "Shopping",
-    "Restaurants & cafés": "Food", "Food delivery": "Food", "Groceries": "Food",
-    "Bills (power, phone, fines)": "Life admin", "Gov, rent fees & telecom": "Life admin", "Health & gym": "Life admin",
-    "Therapy": "Life admin", "Transport & car": "Life admin", "Bank fees": "Life admin",
-    "AI & software subs": "Life admin", "Laundry & home services": "Life admin",
-    "Transfers to people": "People & giving", "Family & gifts": "People & giving", "Charity": "People & giving",
-    "Gifts & flowers": "People & giving", "Cash withdrawals": "People & giving",
-    "Fun & events": "Fun", P.ONE_OFF_LABEL: "One-offs", "Other / unknown": "Unknown",
-}
 CITY = P.CITIES  # city names to add to the Google Maps merchant search
 
 
@@ -64,7 +51,7 @@ def main():
     for r in csv.DictReader(open(DATA / "drahim_categories.csv")) if (DATA / "drahim_categories.csv").exists() else []:
         dcat.setdefault(r["window"], {})[r["category"]] = float(r["amount"])
     data = {"txs": txs, "income": income, "inc_tx": inc_tx, "xfer_tx": xfer_tx, "drahim": drahim, "dcat": dcat,
-            "cfg": {**P.DASHBOARD, "spouse": P.SPOUSE_GROUP}, "icons": ICONS}
+            "cfg": {**P.DASHBOARD, "spouse": P.SPOUSE_GROUP}, "icons": ICONS, "pace": pace.compute()}
     html = open(CODE / "dashboard_template.html", encoding="utf-8").read().replace("/*DATA*/", json.dumps(data, ensure_ascii=False))
     open(DATA / "dashboard.html", "w", encoding="utf-8").write(html)
     print(f"dashboard.html: {len(txs)} transactions")

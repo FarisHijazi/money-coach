@@ -34,8 +34,8 @@ from starlette.responses import FileResponse, JSONResponse, PlainTextResponse, R
 
 ANALYZER = Path(__file__).resolve().parent.parent / "analyzer"
 sys.path.insert(0, str(ANALYZER))
-from build_dashboard import GROUP  # noqa: E402
-from categorize import label  # noqa: E402
+from categorize import GROUP, label  # noqa: E402
+import pace  # noqa: E402
 from config import DATA  # noqa: E402
 import pipeline  # noqa: E402
 
@@ -107,6 +107,13 @@ def status() -> dict:
 def weekly_check() -> str:
     """Grade last Sun–Sat week vs the weekly budget, plus SAFE TO SPEND for this month."""
     return weekly_text()
+
+
+@mcp.tool()
+def month_pace() -> dict:
+    """This month so far: per budget group, spent vs budget and the projected month-end total (fixed costs at
+    budget, the rest at the current daily rate), plus how much variable spending is left per day."""
+    return pace.compute()
 
 
 @mcp.tool()

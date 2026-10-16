@@ -19,6 +19,22 @@ NONCARD = {  # ledger sub -> category
     "fee": "Bank fees",
 }
 
+# category -> dashboard / budget group (personal.py DASHBOARD['budget'] keys)
+GROUP = {
+    "Rent": "Rent", "Loans": "Loans",
+    P.SPOUSE_LABEL: P.SPOUSE_GROUP,
+    "Travel": "Travel",
+    "Online shopping": "Shopping", "Home & furniture": "Shopping", "Clothes & beauty": "Shopping",
+    "Home lab / gadgets": "Shopping",
+    "Restaurants & cafés": "Food", "Food delivery": "Food", "Groceries": "Food",
+    "Bills (power, phone, fines)": "Life admin", "Gov, rent fees & telecom": "Life admin", "Health & gym": "Life admin",
+    "Therapy": "Life admin", "Transport & car": "Life admin", "Bank fees": "Life admin",
+    "AI & software subs": "Life admin", "Laundry & home services": "Life admin",
+    "Transfers to people": "People & giving", "Family & gifts": "People & giving", "Charity": "People & giving",
+    "Gifts & flowers": "People & giving", "Cash withdrawals": "People & giving",
+    "Fun & events": "Fun", P.ONE_OFF_LABEL: "One-offs", "Other / unknown": "Unknown",
+}
+
 # Display only: names stay plain everywhere they are matched (budgets, weekly check, colors).
 ICONS = {
     # categories

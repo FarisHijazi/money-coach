@@ -82,7 +82,7 @@ INCOME_SUBS = ("salary", "tenant_rent")  # flows.csv income subs counted as inco
 CITIES = re.compile(r"(RIYADH|JEDDAH|DAMMAM|MAKKAH|MADINAH)", re.I)  # added to the Maps merchant search
 DRAHIM_REPORT = []  # optional: Drahim app's monthly {"from", "to", "spend", "income", "xfer"} to compare
 DASHBOARD = {
-    "subtitle": "bank SMS + statements · local file",
+    "subtitle": "bank SMS + statements",
     "window": "2026",
     "anchor": "2026-12-26T12:00:00",  # period view opens on this date
     "rent": {"monthly": 5000, "bank": "BANK", "toggle": "Spread prepaid rent (60k/yr → 5k/mo)",

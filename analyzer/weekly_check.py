@@ -7,6 +7,7 @@ from collections import Counter
 from datetime import date, datetime, timedelta
 
 from categorize import CARD_SUBS, NONCARD, category, label, merchant
+import pace
 from config import DATA, P
 
 WEEKLY_BUDGET = P.WEEKLY_BUDGET  # discretionary only (excludes EXCLUDE)
@@ -48,6 +49,7 @@ def main():
     print("Top categories:", ", ".join(f"{label(c)} {v:,.0f}" for c, v in by_cat.most_common(4)))
     print("Biggest buys:", ", ".join(f"{m or '?'} {a:,.0f} ({t:%a %H:%M})"
                                      for t, _, m, a in sorted(rows, key=lambda r: -r[3])[:5]))
+    print(pace.text())
 
 
 if __name__ == "__main__":
