@@ -8,6 +8,7 @@ import os
 import re
 import urllib.parse as up
 
+from categorize import ICONS
 from config import CODE, DATA, P
 
 GROUP = {
@@ -63,7 +64,7 @@ def main():
     for r in csv.DictReader(open(DATA / "drahim_categories.csv")) if (DATA / "drahim_categories.csv").exists() else []:
         dcat.setdefault(r["window"], {})[r["category"]] = float(r["amount"])
     data = {"txs": txs, "income": income, "inc_tx": inc_tx, "xfer_tx": xfer_tx, "drahim": drahim, "dcat": dcat,
-            "cfg": {**P.DASHBOARD, "spouse": P.SPOUSE_GROUP}}
+            "cfg": {**P.DASHBOARD, "spouse": P.SPOUSE_GROUP}, "icons": ICONS}
     html = open(CODE / "dashboard_template.html", encoding="utf-8").read().replace("/*DATA*/", json.dumps(data, ensure_ascii=False))
     open(DATA / "dashboard.html", "w", encoding="utf-8").write(html)
     print(f"dashboard.html: {len(txs)} transactions")

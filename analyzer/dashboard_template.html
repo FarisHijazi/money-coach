@@ -120,6 +120,7 @@ th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--ink)}
 <script>
 const D=/*DATA*/;
 const C=D.cfg; // personal labels, budgets and plan: personal.py DASHBOARD
+const E=n=>(D.icons&&D.icons[n]?D.icons[n]+' ':'')+n; // display label with emoji (categorize.py ICONS)
 subt.textContent=C.subtitle;catWin.textContent=`(${C.window})`;optRentL.textContent=C.rent.toggle;optOneL.textContent=C.one_off_toggle;
 const COL={"Rent":"#B3B2AA","Loans":"#75746E",[C.spouse]:"#D4537E","Travel":"#378ADD","Shopping":"#D85A30","Food":"#EF9F27","Life admin":"#1D9E75","People & giving":"#7F77DD","Fun":"#ED93B1","One-offs":"#E24B4A","Unknown":"#5F5E5A"};
 const GROUPS=Object.keys(COL);
@@ -141,8 +142,8 @@ function draw(){
   const inc=MONTHS.map(m=>D.income[m]||0),tin=inc.reduce((a,b)=>a+b,0)/n,tout=R.reduce((a,t)=>a+t.a,0)/n;
   kIn.textContent=f(tin);kOut.textContent=f(tout);kGap.textContent=f(tin-tout);kGap.style.color=tin-tout<10000?'var(--bad)':'var(--good)';
   kUnk.textContent=D.txs.filter(t=>t.grp==='Unknown').length+' tx · '+f(D.txs.filter(t=>t.grp==='Unknown').reduce((a,t)=>a+t.a,0)/n)+'/mo';
-  leg.innerHTML=GROUPS.filter(g=>EN.has(g)).map(g=>`<span onclick="pick('${g}')"><span class="sw" style="background:${COL[g]}"></span>${g} ${f(by[g].reduce((a,b)=>a+b,0)/n)}</span>`).join('')+'<span><span class="sw" style="background:none;border-top:2px dashed #E24B4A;height:0;width:14px"></span>Income</span>';
-  const ds=[{type:'line',label:'Income',data:inc,borderColor:'#E24B4A',borderDash:[6,4],pointRadius:3,borderWidth:2,order:0},...GROUPS.map(g=>({type:'bar',label:g,data:by[g],backgroundColor:COL[g],stack:'s',order:1}))];
+  leg.innerHTML=GROUPS.filter(g=>EN.has(g)).map(g=>`<span onclick="pick('${g}')"><span class="sw" style="background:${COL[g]}"></span>${E(g)} ${f(by[g].reduce((a,b)=>a+b,0)/n)}</span>`).join('')+'<span><span class="sw" style="background:none;border-top:2px dashed #E24B4A;height:0;width:14px"></span>Income</span>';
+  const ds=[{type:'line',label:'Income',data:inc,borderColor:'#E24B4A',borderDash:[6,4],pointRadius:3,borderWidth:2,order:0},...GROUPS.map(g=>({type:'bar',label:E(g),data:by[g],backgroundColor:COL[g],stack:'s',order:1}))];
   const labels=MONTHS.map(m=>new Date(m+'-01').toLocaleString('en',{month:'short'}));
   if(chart){chart.data.datasets=ds;chart.update();}
   else chart=new Chart(ch,{data:{labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,
@@ -156,9 +157,9 @@ function tree_(){
   R.forEach(t=>{(g[t.grp]??={tot:0,c:{}}).tot+=t.a;const c=(g[t.grp].c[t.cat]??={tot:0,m:{}});c.tot+=t.a;c.m[t.mer]=(c.m[t.mer]||0)+t.a});
   let h='';
   Object.entries(g).sort((a,b)=>b[1].tot-a[1].tot).forEach(([gn,gv])=>{
-    h+=`<div class="it gh ${sel.grp===gn&&!sel.cat?'on':''}" onclick="pick('${gn}')"><span class="n"><span class="sw" style="background:${COL[gn]}"></span> ${gn}</span><span class="x">${f(gv.tot/n)}/mo</span></div>`;
+    h+=`<div class="it gh ${sel.grp===gn&&!sel.cat?'on':''}" onclick="pick('${gn}')"><span class="n"><span class="sw" style="background:${COL[gn]}"></span> ${E(gn)}</span><span class="x">${f(gv.tot/n)}/mo</span></div>`;
     if(sel.grp===gn)Object.entries(gv.c).sort((a,b)=>b[1].tot-a[1].tot).forEach(([cn,cv])=>{
-      h+=`<div class="it ci ${sel.cat===cn&&!sel.mer?'on':''}" onclick="pick('${gn}',${JSON.stringify(cn).replace(/"/g,'&quot;')})"><span class="n">${cn}</span><span class="x">${f(cv.tot/n)}/mo</span></div>`;
+      h+=`<div class="it ci ${sel.cat===cn&&!sel.mer?'on':''}" onclick="pick('${gn}',${JSON.stringify(cn).replace(/"/g,'&quot;')})"><span class="n">${E(cn)}</span><span class="x">${f(cv.tot/n)}/mo</span></div>`;
       if(sel.cat===cn)Object.entries(cv.m).sort((a,b)=>b[1]-a[1]).slice(0,40).forEach(([mn,mv])=>{
         h+=`<div class="it ci ${sel.mer===mn?'on':''}" style="padding-left:40px" onclick="pick('${gn}',${JSON.stringify(cn).replace(/"/g,'&quot;')},${JSON.stringify(mn).replace(/"/g,'&quot;')})"><span class="n">${mn||'(no name)'}</span><span class="x">${f(mv)} total</span></div>`;});
     });
@@ -174,7 +175,7 @@ function table(){
   document.querySelectorAll('#txh th').forEach(h=>{if(h.dataset.k)h.textContent=h.dataset.l+(tsort.k===h.dataset.k?(tsort.dir>0?' ↑':' ↓'):'')});
   const tot=R.reduce((a,t)=>a+t.a,0);
   document.getElementById('sel').textContent=`${R.length} tx · ${f(tot)} SAR`;
-  tb.innerHTML=R.slice(0,600).map((t,i)=>`<tr class="tx" onclick="tog(${i})"><td>${t.d.slice(5)}</td><td>${t.mer||'—'}</td><td><span class="pill">${t.cat}</span></td><td>${t.bank} ${t.card}</td><td class="a ${t.a<0?'neg':''}">${f(t.a)}</td></tr>
+  tb.innerHTML=R.slice(0,600).map((t,i)=>`<tr class="tx" onclick="tog(${i})"><td>${t.d.slice(5)}</td><td>${t.mer||'—'}</td><td><span class="pill">${E(t.cat)}</span></td><td>${t.bank} ${t.card}</td><td class="a ${t.a<0?'neg':''}">${f(t.a)}</td></tr>
   <tr class="det" id="d${i}" hidden><td colspan="5"><div class="sms">${t.sms}</div>${t.maps?`<a href="${t.maps}" target="_blank">Google Maps ↗</a> · `:''}${t.gmail?`<a href="${t.gmail}" target="_blank">Gmail that day ↗</a> · `:''}<a href="https://www.google.com/search?q=${encodeURIComponent(t.mer)}" target="_blank">Google ↗</a></td></tr>`).join('');
 }
 let tsort={k:'d',dir:-1};
@@ -213,19 +214,19 @@ function period(){
   T.forEach(t=>{const i=dl.indexOf(t.d.slice(0,10));if(i>=0)by[t.grp][i]+=t.a;});
   let labels=dl.map(d=>P.mode==='week'?new Date(d).toDateString().slice(0,3):d.slice(8)),sets=by;
   if(P.mode==='year'){const ms=[...new Set(dl.map(d=>d.slice(0,7)))];sets={};GROUPS.forEach(g=>sets[g]=ms.map(m=>by[g].reduce((a,v,i)=>dl[i].startsWith(m)?a+v:a,0)));labels=ms.map(m=>m.slice(5));}
-  const ds=GROUPS.map(g=>({label:g,data:sets[g],backgroundColor:COL[g],stack:'s'}));
+  const ds=GROUPS.map(g=>({label:E(g),data:sets[g],backgroundColor:COL[g],stack:'s'}));
   if(pchart){pchart.data.labels=labels;pchart.data.datasets=ds;pchart.update();}
   else pchart=new Chart(pch,{type:'bar',data:{labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${f(c.raw)}`}}},scales:{x:{stacked:true,ticks:{autoSkip:true}},y:{stacked:true,ticks:{callback:v=>v>=1000?v/1000+'k':v}}}}});
   // where did your money go
   const g={};T.forEach(t=>{(g[t.grp]??={a:0,c:{}}).a+=t.a;g[t.grp].c[t.cat]=(g[t.grp].c[t.cat]||0)+t.a;});
-  pWhere.innerHTML=Object.entries(g).sort((a,b)=>b[1].a-a[1].a).map(([k,v])=>`<div class="it" onclick="pfilter('${k}','${s}','${e}')"><span class="n"><span class="sw" style="background:${COL[k]}"></span> ${k} <span class="cmp">${tot?(100*v.a/tot).toFixed(1):0}% · ${Object.entries(v.c).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([c,x])=>c.split(' (')[0]+' '+f(x)).join(', ')}</span></span><span class="x">${f(v.a)}</span></div>`).join('');
+  pWhere.innerHTML=Object.entries(g).sort((a,b)=>b[1].a-a[1].a).map(([k,v])=>`<div class="it" onclick="pfilter('${k}','${s}','${e}')"><span class="n"><span class="sw" style="background:${COL[k]}"></span> ${E(k)} <span class="cmp">${tot?(100*v.a/tot).toFixed(1):0}% · ${Object.entries(v.c).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([c,x])=>E(c).split(' (')[0]+' '+f(x)).join(', ')}</span></span><span class="x">${f(v.a)}</span></div>`).join('');
   // budget vs actual (rent always spread here so the comparison is fair)
   const scale=days/30.42,act={};GROUPS.forEach(k=>act[k]=0);
   D.txs.filter(t=>inR(t.d)&&t.cat!=='Rent'&&EN.has(t.grp)).forEach(t=>act[t.grp]+=t.a);if(EN.has('Rent'))act['Rent']+=C.rent.monthly*scale;
   budNote.textContent=P.mode==='month'?'(monthly targets)':`(targets × ${scale.toFixed(2)})`;
   let bt=0,at=0;
   pBud.innerHTML=GROUPS.filter(k=>EN.has(k)).map(k=>{const b=BUDGET[k]*scale,a=act[k];bt+=b;at+=a;const over=a>b+1,w=Math.min(100,b?100*a/b:(a>0?100:0));
-    return `<div class="bud" onclick="pfilter('${k}','${s}','${e}')"><span>${k}</span><span class="bar"><i style="width:${w}%;background:${over?'var(--bad)':'var(--good)'}"></i></span><span style="text-align:right;color:${over?'var(--bad)':'var(--good)'}">${f(a)} / ${f(b)}</span></div>`}).join('');
+    return `<div class="bud" onclick="pfilter('${k}','${s}','${e}')"><span>${E(k)}</span><span class="bar"><i style="width:${w}%;background:${over?'var(--bad)':'var(--good)'}"></i></span><span style="text-align:right;color:${over?'var(--bad)':'var(--good)'}">${f(a)} / ${f(b)}</span></div>`}).join('');
   budTot.innerHTML=`Total <b style="color:${at>bt?'var(--bad)':'var(--good)'}">${f(at)}</b> vs budget ${f(bt)} · income ${f(inc)}`;
 }
 function pfilter(g,s,e){sel={grp:g,cat:null,mer:null,month:'',from:s,to:e};mo.value='';tree_();table();document.getElementById('tb').scrollIntoView({behavior:'smooth'});}
@@ -248,7 +249,7 @@ function catTable(){
   document.querySelectorAll('#cath th').forEach(h=>{if(h.dataset.k)h.textContent=h.dataset.l+(csort.k===h.dataset.k?(csort.dir>0?' ↑':' ↓'):'')});
   const rows=ORD.map(g=>{const on=EN.has(g),mo=tot[g]/n;if(on){T+=tot[g];M+=mo;}
     return `<tr style="${on?'':'opacity:.45'}"><td><input type="checkbox" ${on?'checked':''} onchange="togGrp('${g}',this)"></td>
-      <td><span class="sw" style="background:${COL[g]}"></span> ${g}</td>
+      <td><span class="sw" style="background:${COL[g]}"></span> ${E(g)}</td>
       <td class="a">${f(tot[g])}</td><td class="a">${f(mo)}</td><td class="a">${f(mo*12)}</td></tr>`;}).join('');
   catTb.innerHTML=rows+`<tr><td></td><td><b>Total (ticked)</b></td><td class="a"><b>${f(T)}</b></td><td class="a"><b>${f(M)}</b></td><td class="a"><b>${f(M*12)}</b></td></tr>`;
 }

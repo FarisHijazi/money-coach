@@ -6,7 +6,7 @@ import csv
 from collections import Counter
 from datetime import date, datetime, timedelta
 
-from categorize import CARD_SUBS, NONCARD, category, merchant
+from categorize import CARD_SUBS, NONCARD, category, label, merchant
 from config import DATA, P
 
 WEEKLY_BUDGET = P.WEEKLY_BUDGET  # discretionary only (excludes EXCLUDE)
@@ -45,7 +45,7 @@ def main():
           f"({month_personal:,.0f} spent so far in {today:%b})" + ("  ← OVER" if left < 0 else ""))
     print(f"Late-night (10pm–4am): {len(late)} purchases, {sum(r[3] for r in late):,.0f} SAR")
     print(f"Food delivery: {len(delivery)} orders, {sum(r[3] for r in delivery):,.0f} SAR")
-    print("Top categories:", ", ".join(f"{c} {v:,.0f}" for c, v in by_cat.most_common(4)))
+    print("Top categories:", ", ".join(f"{label(c)} {v:,.0f}" for c, v in by_cat.most_common(4)))
     print("Biggest buys:", ", ".join(f"{m or '?'} {a:,.0f} ({t:%a %H:%M})"
                                      for t, _, m, a in sorted(rows, key=lambda r: -r[3])[:5]))
 

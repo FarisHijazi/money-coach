@@ -35,6 +35,7 @@ from starlette.responses import FileResponse, JSONResponse, PlainTextResponse, R
 ANALYZER = Path(__file__).resolve().parent.parent / "analyzer"
 sys.path.insert(0, str(ANALYZER))
 from build_dashboard import GROUP  # noqa: E402
+from categorize import label  # noqa: E402
 from config import DATA  # noqa: E402
 import pipeline  # noqa: E402
 
@@ -119,7 +120,7 @@ def month_summary(month: str = "") -> dict:
             cats[r["category"]] += a
             groups[GROUP.get(r["category"], "Unknown")] += a
             n += 1
-    by = lambda d: {k: round(v, 2) for k, v in sorted(d.items(), key=lambda kv: -kv[1])}  # noqa: E731
+    by = lambda d: {label(k): round(v, 2) for k, v in sorted(d.items(), key=lambda kv: -kv[1])}  # noqa: E731
     return {"month": month, "transactions": n, "total": round(sum(cats.values()), 2),
             "by_group": by(groups), "by_category": by(cats)}
 
@@ -132,9 +133,10 @@ def search_transactions(text: str = "", month: str = "", category: str = "", min
     t = text.lower()
     out = [r for r in rows("categorized.csv")
            if (not t or t in (r["merchant"] + r["counterparty"] + r["text"]).lower())
-           and r["datetime"].startswith(month) and (not category or r["category"] == category)
+           and r["datetime"].startswith(month) and (not category or category in (r["category"], label(r["category"])))
            and float(r["amount"]) >= min_amount]
-    return sorted(out, key=lambda r: r["datetime"], reverse=True)[:limit]
+    out = sorted(out, key=lambda r: r["datetime"], reverse=True)[:limit]
+    return [{**r, "category": label(r["category"])} for r in out]
 
 
 @mcp.tool()

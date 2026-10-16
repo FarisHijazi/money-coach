@@ -19,6 +19,26 @@ NONCARD = {  # ledger sub -> category
     "fee": "Bank fees",
 }
 
+# Display only: names stay plain everywhere they are matched (budgets, weekly check, colors).
+ICONS = {
+    # categories
+    "Restaurants & cafés": "🍽️", "Food delivery": "🛵", "Groceries": "🛒", "Online shopping": "📦",
+    "Home & furniture": "🛋️", "Clothes & beauty": "👗", "Home lab / gadgets": "🖥️", "AI & software subs": "🤖",
+    "Travel": "✈️", "Transport & car": "🚗", "Health & gym": "💪", "Therapy": "🧠",
+    "Bills (power, phone, fines)": "🧾", "Gov, rent fees & telecom": "🏛️", "Laundry & home services": "🧺",
+    "Bank fees": "🏦", "Transfers to people": "💸", "Family & gifts": "👨‍👩‍👧", "Gifts & flowers": "💐",
+    "Charity": "🤲", "Cash withdrawals": "💵", "Fun & events": "🎉", "Loans": "📉", "Rent": "🏠",
+    "Other / unknown": "❓", P.SPOUSE_LABEL: "💍", P.ONE_OFF_LABEL: "🎁",
+    # dashboard groups
+    "Shopping": "🛍️", "Food": "🍔", "Life admin": "🗂️", "People & giving": "🤝", "Fun": "🎉",
+    "One-offs": "🎁", "Unknown": "❓", P.SPOUSE_GROUP: "💍",
+}
+
+
+def label(name):
+    """ "🍽️ Restaurants & cafés" — for printing only."""
+    return f"{ICONS[name]} {name}" if name in ICONS else name
+
 
 def merchant(x):
     m = x["counterparty"]
