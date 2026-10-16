@@ -1,0 +1,22 @@
+# Copy to compose.override.yml (gitignored). Example: Traefik on a shared `public` network, the UI
+# behind an auth forward-auth middleware, /mcp and /api left to the app's bearer token.
+services:
+  server:
+    ports: !reset []
+    networks: [public]
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: public
+      traefik.http.services.money.loadbalancer.server.port: "8000"
+      traefik.http.routers.money.rule: Host(`money.example.com`)
+      traefik.http.routers.money.entrypoints: web
+      traefik.http.routers.money.middlewares: require-auth@file
+      traefik.http.routers.money.service: money
+      traefik.http.routers.money-api.rule: Host(`money.example.com`) && (PathPrefix(`/mcp`) || PathPrefix(`/api/`) || PathPrefix(`/.well-known/`))
+      traefik.http.routers.money-api.entrypoints: web
+      traefik.http.routers.money-api.priority: "100"
+      traefik.http.routers.money-api.service: money
+
+networks:
+  public:
+    external: true

@@ -1,0 +1,44 @@
+# docker compose up -d --build         -> the server (UI + /api/ingest + /mcp) on 127.0.0.1:8000
+# docker compose --profile macos up -d  -> also a macOS VM to run the pusher in (needs /dev/kvm)
+# Site-specific bits (reverse proxy labels, networks) go in a gitignored compose.override.yml —
+# see compose.override.example.yml.
+services:
+  server:
+    build: .
+    restart: unless-stopped
+    environment:
+      MONEY_TOKEN: ${MONEY_TOKEN:?put MONEY_TOKEN in .env (openssl rand -hex 32)}
+      # SMS times are Saudi local time and the weekly check uses "today"; POSIX form needs no tzdata
+      TZ: "<+03>-3"
+      # Optional OAuth for /mcp (claude.ai connectors): JWTs from this issuer with aud = client id
+      MONEY_PUBLIC_URL: ${MONEY_PUBLIC_URL:-}
+      MONEY_OIDC_ISSUER: ${MONEY_OIDC_ISSUER:-}
+      MONEY_OIDC_CLIENT_ID: ${MONEY_OIDC_CLIENT_ID:-}
+    volumes:
+      - ./data:/data  # personal.py, statements/*.csv, and everything the pipeline writes
+    ports:
+      - ${MONEY_PORT:-127.0.0.1:8000}:8000
+
+  # Optional: macOS in a container (github.com/dockur/macos) for when there is no real Mac.
+  # Open http://<host>:8006, install, sign in to iCloud with Messages in iCloud ON, give Terminal
+  # Full Disk Access, then in the VM: `sudo -S mount_9p shared` and run
+  # `python3 /Volumes/shared/push.py` on a schedule (see README).
+  # Apple may refuse iCloud/iMessage sign-in on a VM; a real Mac is the reliable path.
+  macos:
+    profiles: [macos]
+    image: dockurr/macos:3.12
+    environment:
+      VERSION: "15"
+    devices:
+      - /dev/kvm
+      - /dev/net/tun
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - 127.0.0.1:8006:8006
+      - 127.0.0.1:5900:5900/tcp
+    volumes:
+      - ./macos:/storage
+      - ./pusher:/shared
+    restart: unless-stopped
+    stop_grace_period: 2m

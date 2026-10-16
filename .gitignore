@@ -1,0 +1,31 @@
+# Your real names, numbers and budgets — never commit (template: personal.example.py)
+personal.py
+
+# Every pipeline input/output holds real transactions
+*.csv
+*.json
+*.html
+!dashboard_template.html
+*.txt
+*.pdf
+*.enc
+*.tar.gz
+raw/
+pdfs/
+statements/*
+!statements/parse_*.py
+!statements/stmt_utils.py
+
+# Local notes
+docs/devlog/
+.cc/
+.cc-convos/
+__pycache__/
+.DS_Store
+
+# Deploy-local
+data/
+macos/
+.env
+compose.override.yml
+**/.venv/

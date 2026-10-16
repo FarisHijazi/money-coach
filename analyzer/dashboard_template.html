@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spending Dashboard</title>
+<style>
+:root{--bg:#fafaf8;--card:#fff;--ink:#1d1d1b;--mute:#6b6a65;--line:#e6e4dd;--accent:#534AB7;--bad:#A32D2D;--good:#3B6D11;--hl:#f1efe8}
+@media (prefers-color-scheme:dark){:root{--bg:#141413;--card:#1e1e1c;--ink:#ecebe6;--mute:#9b9a94;--line:#2f2e2b;--accent:#AFA9EC;--bad:#F09595;--good:#97C459;--hl:#262624}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:1180px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:22px;font-weight:600;margin:0 0 4px}.sub{color:var(--mute);font-size:13px;margin-bottom:18px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.card .l{font-size:12px;color:var(--mute)}.card .v{font-size:24px;font-weight:600}
+.row{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:10px 0;font-size:13px;color:var(--mute)}
+.row label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.chartbox{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:18px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--mute);margin-bottom:8px}
+.legend span{display:flex;align-items:center;gap:5px;cursor:pointer}.sw{width:10px;height:10px;border-radius:2px;display:inline-block}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:18px}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;max-height:640px;overflow:auto}
+.it{display:flex;justify-content:space-between;gap:10px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:14px}
+.it:hover,.it.on{background:var(--hl)}.it .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.it .x{color:var(--mute);white-space:nowrap}
+.gh{font-weight:600}.ci{padding-left:22px;font-size:13px}
+input[type=search],select{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:var(--mute);font-weight:500;position:sticky;top:0;background:var(--card);padding:6px}
+td{padding:6px;border-top:1px solid var(--line);vertical-align:top}td.a{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+tr.tx{cursor:pointer}tr.tx:hover{background:var(--hl)}tr.det td{background:var(--hl);font-size:12px;color:var(--mute)}
+tr.det .sms{color:var(--ink);direction:auto;unicode-bidi:plaintext;margin-bottom:6px}
+a{color:var(--accent)}.pill{font-size:11px;padding:1px 7px;border-radius:9px;background:var(--hl);color:var(--mute)}
+.neg{color:var(--good)}
+.tabs{display:flex;gap:4px;background:var(--hl);border-radius:8px;padding:3px;width:max-content}
+.tabs button{border:0;background:none;color:var(--mute);padding:6px 16px;border-radius:6px;cursor:pointer;font-size:14px}
+.tabs button.on{background:var(--card);color:var(--accent);font-weight:600}
+.nav{display:flex;align-items:center;gap:12px;margin:12px 0}.nav button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:4px 12px;cursor:pointer;font-size:16px}
+.ptitle{font-size:13px;color:var(--mute)}.ptotal{font-size:26px;font-weight:600}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:10px 0}
+.kv div{background:var(--hl);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--mute)}.kv b{display:block;font-size:17px;color:var(--ink)}
+.bud{display:grid;grid-template-columns:105px minmax(60px,1fr) 115px;gap:8px;align-items:center;font-size:13px;margin:4px 0;cursor:pointer}
+.bar{display:block;height:10px;background:var(--hl);border-radius:5px;overflow:hidden}.bar i{display:block;height:100%}
+.cmp{font-size:12px;color:var(--mute)}
+th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--ink)}
+</style>
+</head>
+<body>
+<main>
+<h1>Where the money went</h1>
+<div class="sub" id="subt"></div>
+<div class="chartbox" id="period">
+  <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center">
+    <div class="tabs"><button data-p="week">Weekly</button><button data-p="month" class="on">Monthly</button><button data-p="year">Yearly</button></div>
+    <label class="cmp"><input type="checkbox" id="optSpreadP"> Spread rent in this view</label>
+  </div>
+  <div class="nav"><button id="prev">‹</button><div><div class="ptitle" id="pRange"></div><div class="ptotal" id="pTotal"></div></div><button id="next">›</button></div>
+  <div class="kv">
+    <div>Total income<b id="pIn"></b></div><div>Daily average<b id="pAvg"></b></div>
+    <div>Transfers between my accounts<b id="pX"></b></div><div>Drahim says (same dates)<b id="pDr"></b><span id="pDr2"></span></div>
+  </div>
+  <div style="position:relative;height:170px"><canvas id="pch"></canvas></div>
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;margin-top:12px" id="pgrid">
+    <div><div class="ptitle" style="margin-bottom:6px">Where did your money go? <span class="cmp">(click to list transactions below)</span></div><div id="pWhere"></div></div>
+    <div><div class="ptitle" style="margin-bottom:6px">Budget vs actual <span class="cmp" id="budNote"></span></div><div id="pBud"></div><div class="cmp" id="budTot" style="margin-top:6px"></div></div>
+  </div>
+</div>
+<div class="chartbox">
+  <div class="ptitle" style="margin-bottom:6px">Categories — tick to include, untick to hide everywhere <span class="cmp" id="catWin"></span></div>
+  <table style="font-size:13px"><thead><tr id="cath"><th></th><th data-k="name" data-l="Category" onclick="csrt('name')">Category</th><th data-k="v" data-l="Total" style="text-align:right" onclick="csrt('v')">Total</th><th data-k="v" data-l="/ month" style="text-align:right" onclick="csrt('v')">/ month</th><th data-k="v" data-l="/ year" style="text-align:right" onclick="csrt('v')">/ year</th></tr></thead><tbody id="catTb"></tbody></table>
+</div>
+<div class="chartbox" id="plan">
+  <div class="ptitle" style="margin-bottom:6px"><span id="plTitle"></span> <span class="cmp" id="plNote"></span></div>
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:18px" id="plangrid">
+    <div>
+      <table style="font-size:13px">
+        <thead><tr><th>Standing order</th><th style="text-align:right">SAR</th><th>What it is</th></tr></thead>
+        <tbody id="planTb"></tbody>
+      </table>
+    </div>
+    <div>
+      <div class="kv" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
+        <div>True savings / month<b id="plSave"></b></div>
+        <div><span id="plGoalL"></span><b id="plEta"></b></div>
+        <div>In 2 years<b id="pl2y"></b></div>
+      </div>
+      <div class="bar" style="height:16px;border-radius:8px"><i id="plBar" style="background:var(--accent);width:0%"></i></div>
+      <div class="cmp" id="plBarNote" style="margin-top:4px"></div>
+      <div class="cmp" style="margin-top:10px" id="plJum"></div>
+    </div>
+  </div>
+</div>
+<div class="cards">
+  <div class="card"><div class="l">Avg income / month</div><div class="v" id="kIn"></div></div>
+  <div class="card"><div class="l">Avg spending / month</div><div class="v" id="kOut"></div></div>
+  <div class="card"><div class="l">Avg left over / month</div><div class="v" id="kGap"></div></div>
+  <div class="card"><div class="l">Unknown to label</div><div class="v" id="kUnk"></div></div>
+</div>
+<div class="row">
+  <label><input type="checkbox" id="optRent" checked> <span id="optRentL"></span></label>
+  <label><input type="checkbox" id="optOne"> <span id="optOneL"></span></label>
+  <label><input type="checkbox" id="optFixed"> Hide rent &amp; loans</label>
+</div>
+<div class="chartbox">
+  <div class="legend" id="leg"></div>
+  <div style="position:relative;height:340px"><canvas id="ch"></canvas></div>
+</div>
+<div class="grid">
+  <div class="panel" id="tree"></div>
+  <div class="panel">
+    <div class="row" style="margin-top:0">
+      <input type="search" id="q" placeholder="Search merchant / SMS text…" style="flex:1;min-width:160px">
+      <select id="mo"></select>
+      <span id="sel" class="pill"></span>
+    </div>
+    <table><thead><tr id="txh"><th data-k="d" data-l="Date" onclick="tsrt('d')">Date</th><th data-k="mer" data-l="Merchant" onclick="tsrt('mer')">Merchant</th><th data-k="cat" data-l="Category" onclick="tsrt('cat')">Category</th><th data-k="card" data-l="Card" onclick="tsrt('card')">Card</th><th data-k="a" data-l="SAR" style="text-align:right" onclick="tsrt('a')">SAR</th></tr></thead><tbody id="tb"></tbody></table>
+  </div>
+</div>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const D=/*DATA*/;
+const C=D.cfg; // personal labels, budgets and plan: personal.py DASHBOARD
+subt.textContent=C.subtitle;catWin.textContent=`(${C.window})`;optRentL.textContent=C.rent.toggle;optOneL.textContent=C.one_off_toggle;
+const COL={"Rent":"#B3B2AA","Loans":"#75746E",[C.spouse]:"#D4537E","Travel":"#378ADD","Shopping":"#D85A30","Food":"#EF9F27","Life admin":"#1D9E75","People & giving":"#7F77DD","Fun":"#ED93B1","One-offs":"#E24B4A","Unknown":"#5F5E5A"};
+const GROUPS=Object.keys(COL);
+const EN=new Set(GROUPS); // groups currently enabled via the Categories checkboxes
+const MONTHS=[...new Set(D.txs.map(t=>t.m))].sort();
+const f=v=>Math.round(v).toLocaleString('en-US');
+let sel={grp:null,cat:null,mer:null,month:''};
+function rows(){
+  let r=D.txs.slice();
+  if(optRent.checked){r=r.filter(t=>t.cat!=='Rent');MONTHS.forEach(m=>r.push({d:m+'-01',m,bank:C.rent.bank,card:'',a:C.rent.monthly,cat:'Rent',grp:'Rent',mer:C.rent.mer,sms:C.rent.sms,maps:'',gmail:'',synthetic:1}))}
+  if(optOne.checked)r=r.filter(t=>t.grp!=='One-offs');
+  if(optFixed.checked)r=r.filter(t=>t.grp!=='Rent'&&t.grp!=='Loans');
+  return r.filter(t=>EN.has(t.grp));
+}
+let chart;
+function draw(){
+  const R=rows(),n=MONTHS.length;
+  const by={};GROUPS.forEach(g=>by[g]=MONTHS.map(()=>0));R.forEach(t=>{const i=MONTHS.indexOf(t.m);if(i>=0)by[t.grp][i]+=t.a});
+  const inc=MONTHS.map(m=>D.income[m]||0),tin=inc.reduce((a,b)=>a+b,0)/n,tout=R.reduce((a,t)=>a+t.a,0)/n;
+  kIn.textContent=f(tin);kOut.textContent=f(tout);kGap.textContent=f(tin-tout);kGap.style.color=tin-tout<10000?'var(--bad)':'var(--good)';
+  kUnk.textContent=D.txs.filter(t=>t.grp==='Unknown').length+' tx · '+f(D.txs.filter(t=>t.grp==='Unknown').reduce((a,t)=>a+t.a,0)/n)+'/mo';
+  leg.innerHTML=GROUPS.filter(g=>EN.has(g)).map(g=>`<span onclick="pick('${g}')"><span class="sw" style="background:${COL[g]}"></span>${g} ${f(by[g].reduce((a,b)=>a+b,0)/n)}</span>`).join('')+'<span><span class="sw" style="background:none;border-top:2px dashed #E24B4A;height:0;width:14px"></span>Income</span>';
+  const ds=[{type:'line',label:'Income',data:inc,borderColor:'#E24B4A',borderDash:[6,4],pointRadius:3,borderWidth:2,order:0},...GROUPS.map(g=>({type:'bar',label:g,data:by[g],backgroundColor:COL[g],stack:'s',order:1}))];
+  const labels=MONTHS.map(m=>new Date(m+'-01').toLocaleString('en',{month:'short'}));
+  if(chart){chart.data.datasets=ds;chart.update();}
+  else chart=new Chart(ch,{data:{labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${f(c.raw)}`}}},
+    scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>v/1000+'k'}}},
+    onClick:(e,els)=>{const el=els.find(x=>chart.data.datasets[x.datasetIndex].type==='bar');if(el){sel={grp:chart.data.datasets[el.datasetIndex].label,cat:null,mer:null,month:MONTHS[el.index]};mo.value=sel.month;tree_();table();}}}});
+  tree_();table();
+}
+function tree_(){
+  const R=rows(),n=MONTHS.length,g={};
+  R.forEach(t=>{(g[t.grp]??={tot:0,c:{}}).tot+=t.a;const c=(g[t.grp].c[t.cat]??={tot:0,m:{}});c.tot+=t.a;c.m[t.mer]=(c.m[t.mer]||0)+t.a});
+  let h='';
+  Object.entries(g).sort((a,b)=>b[1].tot-a[1].tot).forEach(([gn,gv])=>{
+    h+=`<div class="it gh ${sel.grp===gn&&!sel.cat?'on':''}" onclick="pick('${gn}')"><span class="n"><span class="sw" style="background:${COL[gn]}"></span> ${gn}</span><span class="x">${f(gv.tot/n)}/mo</span></div>`;
+    if(sel.grp===gn)Object.entries(gv.c).sort((a,b)=>b[1].tot-a[1].tot).forEach(([cn,cv])=>{
+      h+=`<div class="it ci ${sel.cat===cn&&!sel.mer?'on':''}" onclick="pick('${gn}',${JSON.stringify(cn).replace(/"/g,'&quot;')})"><span class="n">${cn}</span><span class="x">${f(cv.tot/n)}/mo</span></div>`;
+      if(sel.cat===cn)Object.entries(cv.m).sort((a,b)=>b[1]-a[1]).slice(0,40).forEach(([mn,mv])=>{
+        h+=`<div class="it ci ${sel.mer===mn?'on':''}" style="padding-left:40px" onclick="pick('${gn}',${JSON.stringify(cn).replace(/"/g,'&quot;')},${JSON.stringify(mn).replace(/"/g,'&quot;')})"><span class="n">${mn||'(no name)'}</span><span class="x">${f(mv)} total</span></div>`;});
+    });
+  });
+  tree.innerHTML=h;
+}
+function pick(g,c=null,m=null){sel={...sel,grp:(sel.grp===g&&!c&&!sel.cat)?null:g,cat:c,mer:m};tree_();table();}
+function table(){
+  const q=document.getElementById('q').value.toLowerCase();
+  let R=rows().filter(t=>(!sel.grp||t.grp===sel.grp)&&(!sel.cat||t.cat===sel.cat)&&(!sel.mer||t.mer===sel.mer)&&(!sel.month||t.m===sel.month)&&(!sel.from||(t.d.slice(0,10)>=sel.from&&t.d.slice(0,10)<=sel.to))&&(!q||(t.mer+' '+t.sms).toLowerCase().includes(q)));
+  const kv=t=>tsort.k==='card'?t.bank+' '+t.card:t[tsort.k];
+  R.sort((a,b)=>{const x=kv(a),y=kv(b);return (typeof x==='number'&&typeof y==='number'?x-y:String(x).localeCompare(String(y)))*tsort.dir;});
+  document.querySelectorAll('#txh th').forEach(h=>{if(h.dataset.k)h.textContent=h.dataset.l+(tsort.k===h.dataset.k?(tsort.dir>0?' ↑':' ↓'):'')});
+  const tot=R.reduce((a,t)=>a+t.a,0);
+  document.getElementById('sel').textContent=`${R.length} tx · ${f(tot)} SAR`;
+  tb.innerHTML=R.slice(0,600).map((t,i)=>`<tr class="tx" onclick="tog(${i})"><td>${t.d.slice(5)}</td><td>${t.mer||'—'}</td><td><span class="pill">${t.cat}</span></td><td>${t.bank} ${t.card}</td><td class="a ${t.a<0?'neg':''}">${f(t.a)}</td></tr>
+  <tr class="det" id="d${i}" hidden><td colspan="5"><div class="sms">${t.sms}</div>${t.maps?`<a href="${t.maps}" target="_blank">Google Maps ↗</a> · `:''}${t.gmail?`<a href="${t.gmail}" target="_blank">Gmail that day ↗</a> · `:''}<a href="https://www.google.com/search?q=${encodeURIComponent(t.mer)}" target="_blank">Google ↗</a></td></tr>`).join('');
+}
+let tsort={k:'d',dir:-1};
+function tsrt(k){tsort=tsort.k===k?{k,dir:-tsort.dir}:{k,dir:k==='a'||k==='d'?-1:1};table();}
+function tog(i){const e=document.getElementById('d'+i);e.hidden=!e.hidden}
+mo.innerHTML='<option value="">All months</option>'+MONTHS.map(m=>`<option>${m}</option>`).join('');
+mo.onchange=()=>{sel.month=mo.value;sel.from=null;table()};q.oninput=table;
+[optRent,optOne,optFixed].forEach(o=>o.onchange=draw);
+draw();
+
+// ---------- Drahim-style period view ----------
+const BUDGET=C.budget;
+let P={mode:'month',anchor:new Date(C.anchor)};
+const iso=d=>d.toISOString().slice(0,10);
+function range(){const a=new Date(P.anchor);let s,e;
+  if(P.mode==='week'){s=new Date(a);s.setDate(a.getDate()-a.getDay());e=new Date(s);e.setDate(s.getDate()+6);}
+  else if(P.mode==='month'){ // Drahim salary month: 27th -> 26th
+    s=new Date(a.getFullYear(),a.getMonth()-(a.getDate()>=27?0:1),27,12);e=new Date(s.getFullYear(),s.getMonth()+1,26,12);}
+  else{s=new Date(a.getFullYear(),0,1,12);e=new Date(a.getFullYear(),11,31,12);}
+  return [iso(s),iso(e)];}
+let pchart;
+function period(){
+  const [s,e]=range(),inR=d=>d.slice(0,10)>=s&&d.slice(0,10)<=e;
+  let T=D.txs.filter(t=>inR(t.d)&&EN.has(t.grp));
+  const days=Math.round((new Date(e)-new Date(s))/864e5)+1;
+  if(optSpreadP.checked){T=T.filter(t=>t.cat!=='Rent');T.push({d:s,a:C.rent.monthly*days/30.42,grp:'Rent',cat:'Rent',mer:'Rent spread'});}
+  const tot=T.reduce((a,t)=>a+t.a,0),inc=D.inc_tx.filter(x=>inR(x.d)).reduce((a,x)=>a+x.a,0),xf=D.xfer_tx.filter(x=>inR(x.d)).reduce((a,x)=>a+x.a,0);
+  pRange.textContent=new Date(s).toDateString().slice(0,10)+' — '+new Date(e).toDateString().slice(0,10)+' '+e.slice(0,4);
+  pTotal.textContent=f(tot)+' SAR';pIn.textContent=f(inc);pAvg.textContent=f(tot/days);pX.textContent=f(xf);
+  const dr=P.mode==='month'?D.drahim.find(x=>x.to.slice(0,7)===e.slice(0,7)):null;
+  pDr.textContent=dr?f(dr.spend)+' spent':'—';
+  pDr2.innerHTML=dr?`<span class="cmp">income ${f(dr.income)} · transfers ${f(dr.xfer)}<br>Drahim window ${dr.from.slice(5)}→${dr.to.slice(5)} · diff ${tot-dr.spend>0?'+':''}${f(tot-dr.spend)}</span>`:'';
+  // daily bars
+  const dl=[],by={};GROUPS.forEach(g=>by[g]=[]);
+  for(let i=0;i<days;i++){const d=new Date(s);d.setDate(d.getDate()+i);dl.push(iso(d));GROUPS.forEach(g=>by[g].push(0));}
+  T.forEach(t=>{const i=dl.indexOf(t.d.slice(0,10));if(i>=0)by[t.grp][i]+=t.a;});
+  let labels=dl.map(d=>P.mode==='week'?new Date(d).toDateString().slice(0,3):d.slice(8)),sets=by;
+  if(P.mode==='year'){const ms=[...new Set(dl.map(d=>d.slice(0,7)))];sets={};GROUPS.forEach(g=>sets[g]=ms.map(m=>by[g].reduce((a,v,i)=>dl[i].startsWith(m)?a+v:a,0)));labels=ms.map(m=>m.slice(5));}
+  const ds=GROUPS.map(g=>({label:g,data:sets[g],backgroundColor:COL[g],stack:'s'}));
+  if(pchart){pchart.data.labels=labels;pchart.data.datasets=ds;pchart.update();}
+  else pchart=new Chart(pch,{type:'bar',data:{labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${f(c.raw)}`}}},scales:{x:{stacked:true,ticks:{autoSkip:true}},y:{stacked:true,ticks:{callback:v=>v>=1000?v/1000+'k':v}}}}});
+  // where did your money go
+  const g={};T.forEach(t=>{(g[t.grp]??={a:0,c:{}}).a+=t.a;g[t.grp].c[t.cat]=(g[t.grp].c[t.cat]||0)+t.a;});
+  pWhere.innerHTML=Object.entries(g).sort((a,b)=>b[1].a-a[1].a).map(([k,v])=>`<div class="it" onclick="pfilter('${k}','${s}','${e}')"><span class="n"><span class="sw" style="background:${COL[k]}"></span> ${k} <span class="cmp">${tot?(100*v.a/tot).toFixed(1):0}% · ${Object.entries(v.c).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([c,x])=>c.split(' (')[0]+' '+f(x)).join(', ')}</span></span><span class="x">${f(v.a)}</span></div>`).join('');
+  // budget vs actual (rent always spread here so the comparison is fair)
+  const scale=days/30.42,act={};GROUPS.forEach(k=>act[k]=0);
+  D.txs.filter(t=>inR(t.d)&&t.cat!=='Rent'&&EN.has(t.grp)).forEach(t=>act[t.grp]+=t.a);if(EN.has('Rent'))act['Rent']+=C.rent.monthly*scale;
+  budNote.textContent=P.mode==='month'?'(monthly targets)':`(targets × ${scale.toFixed(2)})`;
+  let bt=0,at=0;
+  pBud.innerHTML=GROUPS.filter(k=>EN.has(k)).map(k=>{const b=BUDGET[k]*scale,a=act[k];bt+=b;at+=a;const over=a>b+1,w=Math.min(100,b?100*a/b:(a>0?100:0));
+    return `<div class="bud" onclick="pfilter('${k}','${s}','${e}')"><span>${k}</span><span class="bar"><i style="width:${w}%;background:${over?'var(--bad)':'var(--good)'}"></i></span><span style="text-align:right;color:${over?'var(--bad)':'var(--good)'}">${f(a)} / ${f(b)}</span></div>`}).join('');
+  budTot.innerHTML=`Total <b style="color:${at>bt?'var(--bad)':'var(--good)'}">${f(at)}</b> vs budget ${f(bt)} · income ${f(inc)}`;
+}
+function pfilter(g,s,e){sel={grp:g,cat:null,mer:null,month:'',from:s,to:e};mo.value='';tree_();table();document.getElementById('tb').scrollIntoView({behavior:'smooth'});}
+function step(n){const a=new Date(P.anchor);if(P.mode==='week')a.setDate(a.getDate()+7*n);else if(P.mode==='month')a.setMonth(a.getMonth()+n);else a.setFullYear(a.getFullYear()+n);P.anchor=a;period();}
+prev.onclick=()=>step(-1);next.onclick=()=>step(1);optSpreadP.onchange=period;
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));P.mode=b.dataset.p;period();});
+period();
+
+// ---------- Categories table: enable/disable + total / monthly / yearly ----------
+let csort={k:null,dir:-1};
+function csrt(k){csort=csort.k===k?{k,dir:-csort.dir}:{k,dir:k==='name'?1:-1};catTable();}
+function catTable(){
+  const n=MONTHS.length,tot={};GROUPS.forEach(g=>tot[g]=0);
+  D.txs.forEach(t=>tot[t.grp]+=t.a);
+  tot['Rent']=C.rent.monthly*n; // prepaid rent spread evenly over the months
+  let T=0,M=0;
+  const ORD=[...GROUPS];
+  if(csort.k==='name')ORD.sort((a,b)=>a.localeCompare(b)*csort.dir);
+  else if(csort.k==='v')ORD.sort((a,b)=>(tot[a]-tot[b])*csort.dir);
+  document.querySelectorAll('#cath th').forEach(h=>{if(h.dataset.k)h.textContent=h.dataset.l+(csort.k===h.dataset.k?(csort.dir>0?' ↑':' ↓'):'')});
+  const rows=ORD.map(g=>{const on=EN.has(g),mo=tot[g]/n;if(on){T+=tot[g];M+=mo;}
+    return `<tr style="${on?'':'opacity:.45'}"><td><input type="checkbox" ${on?'checked':''} onchange="togGrp('${g}',this)"></td>
+      <td><span class="sw" style="background:${COL[g]}"></span> ${g}</td>
+      <td class="a">${f(tot[g])}</td><td class="a">${f(mo)}</td><td class="a">${f(mo*12)}</td></tr>`;}).join('');
+  catTb.innerHTML=rows+`<tr><td></td><td><b>Total (ticked)</b></td><td class="a"><b>${f(T)}</b></td><td class="a"><b>${f(M)}</b></td><td class="a"><b>${f(M*12)}</b></td></tr>`;
+}
+function togGrp(g,el){el.checked?EN.add(g):EN.delete(g);catTable();draw();period();}
+catTable();
+
+// ---------- The plan (standing orders) ----------
+const PLAN=C.plan.orders; // [what, SAR/month, note, counts as savings]
+const PLAN_START=new Date(C.plan.start),GOAL=C.plan.goal;
+plTitle.textContent=C.plan.title;plNote.textContent=C.plan.note;plGoalL.textContent=C.plan.goal_label;
+{
+  const save=PLAN.filter(p=>p[3]).reduce((a,p)=>a+p[1],0);
+  planTb.innerHTML=PLAN.map(p=>`<tr><td>${p[0]}</td><td class="a">${f(p[1])}</td><td class="cmp">${p[3]?'<b style="color:var(--good)">Savings</b>':p[2]}</td></tr>`).join('')
+    +`<tr><td><b>True savings</b></td><td class="a"><b>${f(save)}</b></td><td class="cmp">/month</td></tr>`;
+  const months=Math.max(0,(new Date()-PLAN_START)/2629800000),saved=Math.max(0,Math.floor(months))*save;
+  plSave.textContent=f(save)+' SAR';
+  plEta.textContent=new Date(PLAN_START.getFullYear(),PLAN_START.getMonth()+Math.ceil(GOAL/save)).toLocaleDateString('en',{month:'short',year:'numeric'});
+  pl2y.textContent=f(save*24)+' SAR';
+  plBar.style.width=Math.min(100,100*saved/GOAL)+'%';
+  plBarNote.textContent=`${f(saved)} / ${f(GOAL)} swept so far (counts months since ${C.plan.start}) — ${C.plan.bar_note}`;
+  // "lifestyle" = a few groups tracked as one number
+  const JGROUPS=C.lifestyle.groups,JBUD=C.lifestyle.budget;
+  const ms={};D.txs.forEach(t=>{if(JGROUPS.includes(t.grp))ms[t.m]=(ms[t.m]||0)+t.a;});
+  const avg=Object.values(ms).reduce((a,v)=>a+v,0)/Object.keys(ms).length,last=ms[MONTHS[MONTHS.length-1]]||0;
+  plJum.innerHTML=`<b>${C.lifestyle.label}</b> (${JGROUPS.join(' + ')}, one number for your sit-down): avg <b style="color:${avg>JBUD?'var(--bad)':'var(--good)'}">${f(avg)}</b>/mo · last month ${f(last)} · target ${f(JBUD)} ${C.lifestyle.note}`;
+}
+</script>
+</body>
+</html>
