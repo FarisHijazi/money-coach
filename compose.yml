@@ -14,6 +14,8 @@ services:
       MONEY_PUBLIC_URL: ${MONEY_PUBLIC_URL:-}
       MONEY_OIDC_ISSUER: ${MONEY_OIDC_ISSUER:-}
       MONEY_OIDC_CLIENT_ID: ${MONEY_OIDC_CLIENT_ID:-}
+      # Optional: coach/coach.py on the host (the dashboard chat); see coach/money-coach-chat.service
+      MONEY_CHAT_URL: ${MONEY_CHAT_URL:-}
     volumes:
       - ./data:/data  # personal.py, statements/*.csv, and everything the pipeline writes
     ports:

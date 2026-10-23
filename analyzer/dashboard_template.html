@@ -45,6 +45,19 @@ a{color:var(--accent)}.pill{font-size:11px;padding:1px 7px;border-radius:9px;bac
 .pace .bar{position:relative;overflow:visible}.pace .bar i{border-radius:5px}.pace .bar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.6}
 .fresh{margin:0 0 14px}.fresh button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:4px 12px;cursor:pointer;font-size:13px}
 .fresh button:disabled{opacity:.6;cursor:default}.fresh .err{color:var(--bad);flex-basis:100%;white-space:pre-wrap}
+#chatBtn{position:fixed;right:16px;bottom:16px;border:0;border-radius:24px;padding:12px 18px;background:var(--accent);color:var(--bg);font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 2px 10px #0003;z-index:10}
+#chat{position:fixed;right:16px;bottom:16px;width:min(440px,calc(100vw - 32px));height:min(640px,calc(100vh - 32px));background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 4px 24px #0004;display:flex;flex-direction:column;z-index:11}
+#chat header{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);font-weight:600}
+#chat header button{border:1px solid var(--line);background:var(--card);color:var(--mute);border-radius:6px;padding:3px 10px;cursor:pointer;font-size:12px;margin-left:6px}
+#chatLog{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:14px}
+.cmsg{padding:8px 11px;border-radius:10px;max-width:92%;overflow-wrap:anywhere;direction:auto;unicode-bidi:plaintext}
+.cmsg.user{align-self:flex-end;background:var(--accent);color:var(--bg);white-space:pre-wrap}.cmsg.assistant{align-self:flex-start;background:var(--hl)}
+.cmsg p{margin:0 0 6px}.cmsg p:last-child{margin:0}.cmsg ul,.cmsg ol{margin:4px 0;padding-left:20px}.cmsg table{font-size:12px}.cmsg pre{white-space:pre-wrap;font-size:12px}
+.ctool{font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cerr{font-size:13px;color:var(--bad);white-space:pre-wrap}
+.cdiv{text-align:center;font-size:12px;color:var(--mute);border-top:1px solid var(--line);padding-top:6px}
+#chat form{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)}
+#chat textarea{flex:1;resize:none;height:44px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px;font:inherit;font-size:14px}
+#chat form button{border:0;border-radius:8px;padding:0 16px;background:var(--accent);color:var(--bg);font-weight:600;cursor:pointer}#chat form button:disabled{opacity:.5;cursor:default}
 th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--ink)}
 </style>
 </head>
@@ -126,7 +139,15 @@ th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--ink)}
   </div>
 </div>
 </main>
+<button id="chatBtn" style="display:none" onclick="chatOpen(true)">💬 Coach</button>
+<div id="chat" style="display:none">
+  <header>Money coach<span><button onclick="chatNew()">New chat</button><button onclick="chatOpen(false)">✕</button></span></header>
+  <div id="chatLog"></div>
+  <form onsubmit="chatSend(event)"><textarea id="chatIn" placeholder="Ask about your spending…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();chatSend(event)}"></textarea><button id="chatGo">Send</button></form>
+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
 <script>
 // Freshness bar (server only): the Mac pusher polls every minute, so Refresh = ask it, then wait for the push.
 const TIMEOUT=3*60e3;
@@ -155,6 +176,39 @@ async function refreshNow(){
   freshness();
 }
 if(location.protocol.startsWith('http')){fresh.style.display='';freshness()}
+// Coach chat (server only): coach/coach.py runs one Claude Code conversation; replies land in its log as they stream.
+const esc=t=>t.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+let chatTimer=null;
+function chatRender(h){
+  const near=chatLog.scrollHeight-chatLog.scrollTop-chatLog.clientHeight<80;
+  chatLog.innerHTML=h.messages.map(m=>m.role==='user'?`<div class="cmsg user">${esc(m.text)}</div>`
+    :m.role==='assistant'?`<div class="cmsg assistant">${DOMPurify.sanitize(marked.parse(m.text))}</div>`
+    :m.role==='tool'?`<div class="ctool" title="${esc(m.text)}">🔧 ${esc(m.text)}</div>`
+    :m.role==='divider'?`<div class="cdiv">${esc(m.text)}</div>`:`<div class="cerr">⚠ ${esc(m.text)}</div>`).join('')
+    +(h.busy?'<div class="ctool">Coach is thinking…</div>':'')+(h.messages.length?'':'<div class="ctool">Ask anything: "how am I doing this month?"</div>');
+  if(near)chatLog.scrollTop=chatLog.scrollHeight;
+  chatGo.disabled=h.busy;
+}
+async function chatCall(path,body){
+  const r=await fetch(path,body===undefined?{cache:'no-store'}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const h=await r.json().catch(()=>({error:`HTTP ${r.status}`}));
+  if(!r.ok)throw Error(h.error||`HTTP ${r.status}`);
+  return h;
+}
+async function chatPoll(){
+  clearTimeout(chatTimer);if(chat.style.display==='none')return;
+  try{const h=await chatCall('chat/history');chatRender(h);chatTimer=setTimeout(chatPoll,h.busy?2e3:15e3)}
+  catch(e){chatLog.insertAdjacentHTML('beforeend',`<div class="cerr">⚠ ${esc(e.message)}</div>`);chatTimer=setTimeout(chatPoll,15e3)}
+}
+function chatOpen(on){chat.style.display=on?'':'none';chatBtn.style.display=on?'none':'';if(on){chatPoll();chatIn.focus()}}
+async function chatSend(ev){
+  ev.preventDefault();const text=chatIn.value.trim();if(!text||chatGo.disabled)return;
+  chatGo.disabled=true;
+  try{chatRender(await chatCall('chat/send',{text}));chatIn.value='';chatLog.scrollTop=chatLog.scrollHeight;chatTimer=setTimeout(chatPoll,2e3)}
+  catch(e){chatLog.insertAdjacentHTML('beforeend',`<div class="cerr">⚠ ${esc(e.message)}</div>`);chatGo.disabled=false}
+}
+async function chatNew(){try{chatRender(await chatCall('chat/new',{}))}catch(e){chatLog.insertAdjacentHTML('beforeend',`<div class="cerr">⚠ ${esc(e.message)}</div>`)}}
+if(location.protocol.startsWith('http'))fetch('chat/history',{cache:'no-store'}).then(r=>{if(r.status!==404)chatBtn.style.display=''}).catch(()=>{});
 const D=/*DATA*/;
 const C=D.cfg; // personal labels, budgets and plan: personal.py DASHBOARD
 const E=n=>(D.icons&&D.icons[n]?D.icons[n]+' ':'')+n; // display label with emoji (categorize.py ICONS)

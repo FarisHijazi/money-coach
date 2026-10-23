@@ -75,6 +75,14 @@ pusher/install-macos.sh            # LaunchAgent: polls every minute, pushes on 
 Give the python it prints **Full Disk Access** (System Settings → Privacy & Security), or the
 log (`~/Library/Logs/money-coach-pusher.log`) shows `unable to open database file`.
 
+**Coach chat.** `coach/coach.py` (stdlib) runs on the host where Claude Code is signed in: each chat
+message is one `claude -p --resume <session>` in this directory, so the conversation persists in Claude's
+own store and nothing has to stay alive between messages (the official headless mode, on your
+subscription; Managed Agents would need API billing and send the ledger through Anthropic's control
+plane). Put the coaching brief in a gitignored `CLAUDE.local.md` and pre-approve tools in
+`.claude/settings.local.json`: it runs in `dontAsk` mode, so anything not allowed is refused, never
+prompted. Install with `coach/money-coach-chat.service`; set `MONEY_CHAT_URL` for the server.
+
 **Refresh button.** The dashboard shows when the data was last rebuilt and has a Refresh button. The
 server cannot read SMS itself, so Refresh only flags a request (`POST /refresh`); the pusher polls
 `/api/refresh-wanted` every minute and pushes. Pipeline failures and errors the pusher reports

@@ -12,10 +12,12 @@ Routes (one process, one port):
   GET  /weekly       weekly check as plain text, same proxy.
   POST /refresh      same proxy. Asks the Mac pusher to push now (it polls every minute).
   GET  /refresh-status   same proxy. Last push/rebuild, pending request, last error.
+  GET  /chat/history, POST /chat/send, POST /chat/new   same proxy. Forwarded to coach/coach.py on the host.
 
 Env: MONEY_TOKEN (required), MONEY_DATA (data dir, default ../analyzer), PORT (default 8000),
      MONEY_PUBLIC_URL (e.g. https://money.example.com), MONEY_OIDC_ISSUER + MONEY_OIDC_CLIENT_ID
-     (optional OAuth: tokens must be JWTs from that issuer with aud = that client id).
+     (optional OAuth: tokens must be JWTs from that issuer with aud = that client id),
+     MONEY_CHAT_URL (coach/coach.py, e.g. http://172.17.0.1:8390; the chat panel hides when unset).
 """
 import asyncio
 import csv
@@ -29,6 +31,7 @@ from collections import defaultdict
 from datetime import date, datetime
 from pathlib import Path
 
+import httpx
 import jwt
 import uvicorn
 from mcp.server.auth.provider import AccessToken
@@ -47,6 +50,7 @@ import pipeline  # noqa: E402
 TOKEN = os.environ["MONEY_TOKEN"]
 PUBLIC_URL = (os.environ.get("MONEY_PUBLIC_URL") or "http://localhost:8000").rstrip("/")
 ISSUER, CLIENT_ID = os.environ.get("MONEY_OIDC_ISSUER"), os.environ.get("MONEY_OIDC_CLIENT_ID")
+CHAT = (os.environ.get("MONEY_CHAT_URL") or "").rstrip("/")
 LOCK = asyncio.Lock()
 REQUESTED = DATA / "refresh-requested"  # exists while a Refresh press waits for the pusher; mtime = when
 ERROR = DATA / "last-error.json"        # the newest ingest/pusher failure; cleared by the next good ingest
@@ -208,6 +212,19 @@ async def refresh(_: Request) -> Response:
     ERROR.unlink(missing_ok=True)  # a fresh attempt; it records its own error if it fails again
     REQUESTED.touch()
     return JSONResponse(refresh_state())
+
+
+@mcp.custom_route("/chat/{op}", methods=["GET", "POST"])
+async def chat(request: Request) -> Response:
+    if not CHAT:
+        return JSONResponse({"error": "chat is not configured (MONEY_CHAT_URL)"}, status_code=404)
+    try:
+        async with httpx.AsyncClient(timeout=30) as c:
+            r = await c.request(request.method, f"{CHAT}/{request.path_params['op']}", content=await request.body(),
+                                headers={"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"})
+    except httpx.HTTPError as e:
+        return JSONResponse({"error": f"coach service unreachable: {e!r}"}, status_code=502)
+    return Response(r.content, status_code=r.status_code, media_type="application/json")
 
 
 @mcp.custom_route("/refresh-status", methods=["GET"])

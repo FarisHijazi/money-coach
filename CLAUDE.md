@@ -13,6 +13,8 @@ counts) exactly; don't invent your own structure.
 - The pusher polls every minute; the dashboard's Refresh button only flags a request it picks up
   (`DATA/refresh-requested`). Failures land in `DATA/last-error.json` and show under the button.
   "Last refresh" is `dashboard.html`'s mtime (the pipeline's last output), never `sms-export.csv`'s.
+- The dashboard chat is `coach/coach.py` on the host (not the container): one `claude -p --resume` per
+  message in the repo dir; brief in gitignored `CLAUDE.local.md`, tools in `.claude/settings.local.json`.
 - Prefer the server's MCP tools (`status` first: it says how old the data is). Locally, generated
   files live in `$MONEY_DATA` (default `analyzer/`); check their modification time.
 - `weekly_check` grades the last Sun–Sat week against `WEEKLY_BUDGET` and prints SAFE TO SPEND
