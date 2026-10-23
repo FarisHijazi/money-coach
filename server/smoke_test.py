@@ -43,6 +43,8 @@ async def tools():
 checks = {"mcp without token": (code("/mcp", "POST"), 401),
           "ingest without token": (code("/api/ingest", "POST"), 401),
           "ingest with bad token": (code("/api/ingest", "POST", {"Authorization": "Bearer nope"}), 401),
+          "refresh-wanted without token": (code("/api/refresh-wanted"), 401),
+          "pusher-error without token": (code("/api/pusher-error", "POST"), 401),
           "health": (code("/api/health"), 200)}
 ui = code("/")
 checks["UI"] = (ui, 302) if BASE.startswith("https") else (ui, 200)

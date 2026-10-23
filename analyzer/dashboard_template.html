@@ -43,6 +43,8 @@ a{color:var(--accent)}.pill{font-size:11px;padding:1px 7px;border-radius:9px;bac
 .cmp{font-size:12px;color:var(--mute)}
 .pace{display:grid;grid-template-columns:160px minmax(60px,1fr) 190px;gap:8px;align-items:center;font-size:13px;margin:5px 0}
 .pace .bar{position:relative;overflow:visible}.pace .bar i{border-radius:5px}.pace .bar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.6}
+.fresh{margin:0 0 14px}.fresh button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:4px 12px;cursor:pointer;font-size:13px}
+.fresh button:disabled{opacity:.6;cursor:default}.fresh .err{color:var(--bad);flex-basis:100%;white-space:pre-wrap}
 th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--ink)}
 </style>
 </head>
@@ -50,6 +52,7 @@ th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--ink)}
 <main>
 <h1>Where the money went</h1>
 <div class="sub" id="subt"></div>
+<div class="row fresh" id="fresh" style="display:none"><span id="freshTxt"></span><button id="freshBtn" onclick="refreshNow()">Refresh</button><span class="err" id="freshErr"></span></div>
 <div class="chartbox" id="paceBox">
   <div class="ptitle">This month — on track? <span class="cmp" id="paceNote"></span></div>
   <div class="ptotal" id="paceHead"></div><div class="cmp" id="paceSub" style="margin-bottom:8px"></div>
@@ -125,6 +128,33 @@ th[data-k]{cursor:pointer;user-select:none}th[data-k]:hover{color:var(--ink)}
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
+// Freshness bar (server only): the Mac pusher polls every minute, so Refresh = ask it, then wait for the push.
+const TIMEOUT=3*60e3;
+const ago=t=>{const m=Math.round((Date.now()-new Date(t))/6e4);return m<1?'just now':m<60?`${m} min ago`:m<1440?`${Math.round(m/60)} h ago`:`${Math.round(m/1440)} d ago`};
+let timer=null,shownBuild=null;
+async function freshness(){
+  clearTimeout(timer);let s;
+  try{const r=await fetch('refresh-status',{cache:'no-store'});if(!r.ok)throw Error(`HTTP ${r.status}`);s=await r.json()}
+  catch(e){freshErr.textContent=`Could not reach the server: ${e.message}`;freshBtn.disabled=false;timer=setTimeout(freshness,60e3);return}
+  if(shownBuild&&s.last_rebuild&&s.last_rebuild>shownBuild)return location.reload(); // new data: reload the rebuilt page
+  shownBuild=shownBuild||s.last_rebuild||'';
+  freshTxt.textContent=s.last_rebuild?`Last refresh ${ago(s.last_rebuild)} (${s.last_rebuild.replace('T',' ')})`:'No data pushed yet';
+  const late=s.requested&&Date.now()-new Date(s.requested)>TIMEOUT;
+  freshBtn.disabled=!!s.requested&&!late&&!s.error;
+  freshBtn.textContent=freshBtn.disabled?`Refreshing… waiting for the Mac (asked ${ago(s.requested)})`:'Refresh';
+  const m=s.error?s.error.message.trim().split('\n'):[]; // a traceback: its first and last line say enough
+  freshErr.title=s.error?s.error.message:'';
+  freshErr.textContent=s.error?`${s.error.source} failed ${ago(s.error.at)}: ${m[0]}${m.length>1?' … '+m.at(-1):''}`
+    :late?`The Mac hasn't picked up the refresh after ${ago(s.requested).replace(' ago','')}. Is it asleep, offline, or is the pusher stopped?`:'';
+  timer=setTimeout(freshness,freshBtn.disabled?5e3:60e3);
+}
+async function refreshNow(){
+  freshBtn.disabled=true;freshErr.textContent='';
+  try{const r=await fetch('refresh',{method:'POST'});if(!r.ok)throw Error(`HTTP ${r.status}`)}
+  catch(e){freshErr.textContent=`Refresh request failed: ${e.message}`;freshBtn.disabled=false;return}
+  freshness();
+}
+if(location.protocol.startsWith('http')){fresh.style.display='';freshness()}
 const D=/*DATA*/;
 const C=D.cfg; // personal labels, budgets and plan: personal.py DASHBOARD
 const E=n=>(D.icons&&D.icons[n]?D.icons[n]+' ':'')+n; // display label with emoji (categorize.py ICONS)

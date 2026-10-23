@@ -69,11 +69,16 @@ On a Mac with iPhone SMS syncing (Messages in iCloud, or Text Message Forwarding
 mkdir -p ~/.config/money-coach && chmod 700 ~/.config/money-coach
 printf 'MONEY_URL=https://money.example.com\nMONEY_TOKEN=...\n' > ~/.config/money-coach/pusher.env
 chmod 600 ~/.config/money-coach/pusher.env
-pusher/install-macos.sh            # LaunchAgent: at login + every 30 min
+pusher/install-macos.sh            # LaunchAgent: polls every minute, pushes on Refresh or every 30 min
 ```
 
 Give the python it prints **Full Disk Access** (System Settings → Privacy & Security), or the
 log (`~/Library/Logs/money-coach-pusher.log`) shows `unable to open database file`.
+
+**Refresh button.** The dashboard shows when the data was last rebuilt and has a Refresh button. The
+server cannot read SMS itself, so Refresh only flags a request (`POST /refresh`); the pusher polls
+`/api/refresh-wanted` every minute and pushes. Pipeline failures and errors the pusher reports
+(`/api/pusher-error`) show under the button; so does a request the Mac has not picked up in 3 min.
 
 **No Mac?** `docker compose --profile macos up -d` adds a macOS VM
 ([dockur/macos](https://github.com/dockur/macos), needs `/dev/kvm`) with `pusher/` shared in.

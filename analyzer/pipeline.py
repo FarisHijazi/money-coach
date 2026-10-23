@@ -15,7 +15,8 @@ def run():
         steps.append("reconcile.py")
     steps += ["categorize.py", "build_dashboard.py"]
     for s in steps:
-        subprocess.run([sys.executable, str(CODE / s)], cwd=CODE, check=True, stdout=subprocess.DEVNULL)
+        subprocess.run([sys.executable, str(CODE / s)], cwd=CODE, check=True, stdout=subprocess.DEVNULL,
+                       stderr=subprocess.PIPE, text=True)  # stderr: the error the dashboard shows
     return steps
 
 

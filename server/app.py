@@ -3,11 +3,15 @@
 Routes (one process, one port):
   POST /api/ingest   bearer token. Body: the pusher's SMS CSV (gzip ok). Saves it, reruns the pipeline.
   GET  /api/health   public. Only says when data last arrived.
+  GET  /api/refresh-wanted   bearer. The pusher polls this; true after someone pressed Refresh.
+  POST /api/pusher-error     bearer. Body: text. The pusher reports a failure it hit on the Mac.
   /mcp               bearer: MONEY_TOKEN, or an OAuth access token from MONEY_OIDC_ISSUER (claude.ai
                      connectors). MCP streamable HTTP: weekly_check, month_summary, search_transactions...
   /.well-known/oauth-protected-resource/mcp   public. Points OAuth clients at MONEY_OIDC_ISSUER.
   GET  /             the dashboard. NO auth here: put it behind an auth proxy (Authentik in our deploy).
   GET  /weekly       weekly check as plain text, same proxy.
+  POST /refresh      same proxy. Asks the Mac pusher to push now (it polls every minute).
+  GET  /refresh-status   same proxy. Last push/rebuild, pending request, last error.
 
 Env: MONEY_TOKEN (required), MONEY_DATA (data dir, default ../analyzer), PORT (default 8000),
      MONEY_PUBLIC_URL (e.g. https://money.example.com), MONEY_OIDC_ISSUER + MONEY_OIDC_CLIENT_ID
@@ -17,6 +21,7 @@ import asyncio
 import csv
 import gzip
 import hmac
+import json
 import os
 import subprocess
 import sys
@@ -43,6 +48,8 @@ TOKEN = os.environ["MONEY_TOKEN"]
 PUBLIC_URL = (os.environ.get("MONEY_PUBLIC_URL") or "http://localhost:8000").rstrip("/")
 ISSUER, CLIENT_ID = os.environ.get("MONEY_OIDC_ISSUER"), os.environ.get("MONEY_OIDC_CLIENT_ID")
 LOCK = asyncio.Lock()
+REQUESTED = DATA / "refresh-requested"  # exists while a Refresh press waits for the pusher; mtime = when
+ERROR = DATA / "last-error.json"        # the newest ingest/pusher failure; cleared by the next good ingest
 
 
 class Verifier:
@@ -92,13 +99,23 @@ def mtime(name):
     return datetime.fromtimestamp(f.stat().st_mtime).isoformat(timespec="seconds") if f.exists() else None
 
 
+def set_error(source, message):
+    ERROR.write_text(json.dumps({"at": datetime.now().isoformat(timespec="seconds"), "source": source,
+                                 "message": message[-2000:]}))
+
+
+def refresh_state():
+    return {"last_push": mtime("sms-export.csv"), "last_rebuild": mtime("dashboard.html"),
+            "requested": mtime(REQUESTED.name), "error": json.loads(ERROR.read_text()) if ERROR.exists() else None}
+
+
 # ---------- MCP tools ----------
 
 @mcp.tool()
 def status() -> dict:
     """How fresh the data is: when SMS were last pushed, and the newest transaction in the ledger."""
     ledger = rows("ledger.csv")
-    return {"last_push": mtime("sms-export.csv"), "last_rebuild": mtime("categorized.csv"),
+    return {"last_push": mtime("sms-export.csv"), "last_rebuild": mtime("dashboard.html"),
             "transactions": len(ledger), "newest_transaction": max((x["datetime"] for x in ledger), default=None),
             "unparsed_sms": len(rows("unparsed.csv"))}
 
@@ -165,8 +182,37 @@ async def ingest(request: Request) -> Response:
         tmp = DATA / "sms-export.csv.tmp"
         tmp.write_bytes(body)
         tmp.replace(DATA / "sms-export.csv")
-        steps = await asyncio.to_thread(pipeline.run)
+        try:
+            steps = await asyncio.to_thread(pipeline.run)
+        except subprocess.CalledProcessError as e:
+            set_error("server pipeline", f"{Path(e.cmd[1]).name} failed: {(e.stderr or '').strip()}")
+            return JSONResponse({"error": json.loads(ERROR.read_text())}, status_code=500)
+        ERROR.unlink(missing_ok=True)
+        REQUESTED.unlink(missing_ok=True)
     return JSONResponse({"bytes": len(body), "steps": steps, **status()})
+
+
+@mcp.custom_route("/api/refresh-wanted", methods=["GET"])
+async def refresh_wanted(_: Request) -> Response:
+    return JSONResponse({"wanted": REQUESTED.exists()})
+
+
+@mcp.custom_route("/api/pusher-error", methods=["POST"])
+async def pusher_error(request: Request) -> Response:
+    set_error("Mac pusher", (await request.body()).decode(errors="replace"))
+    return JSONResponse({"ok": True})
+
+
+@mcp.custom_route("/refresh", methods=["POST"])
+async def refresh(_: Request) -> Response:
+    ERROR.unlink(missing_ok=True)  # a fresh attempt; it records its own error if it fails again
+    REQUESTED.touch()
+    return JSONResponse(refresh_state())
+
+
+@mcp.custom_route("/refresh-status", methods=["GET"])
+async def refresh_status(_: Request) -> Response:
+    return JSONResponse(refresh_state())
 
 
 @mcp.custom_route("/api/health", methods=["GET"])
@@ -188,11 +234,11 @@ async def weekly(_: Request) -> Response:
 
 
 def require_token(app):
-    """ASGI wrapper: /api/ingest needs `Authorization: Bearer $MONEY_TOKEN` (/mcp is checked by Verifier)."""
+    """ASGI wrapper: /api/* except /api/health needs `Authorization: Bearer $MONEY_TOKEN` (/mcp: Verifier)."""
     want = f"Bearer {TOKEN}".encode()
 
     async def wrapped(scope, receive, send):
-        if scope["type"] == "http" and scope["path"] == "/api/ingest":
+        if scope["type"] == "http" and scope["path"].startswith("/api/") and scope["path"] != "/api/health":
             got = dict(scope["headers"]).get(b"authorization", b"")
             if not hmac.compare_digest(got, want):
                 return await PlainTextResponse("unauthorized", status_code=401)(scope, receive, send)

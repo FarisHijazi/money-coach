@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install (or reinstall) a LaunchAgent that runs push.py at login and every 30 minutes.
+# Install (or reinstall) a LaunchAgent that runs push.py at login and every minute (it only pushes when asked or every 30 min; see push.py).
 # Usage: ./install-macos.sh [python3 path]   — that python needs Full Disk Access (chat.db).
 # Config: ~/.config/money-coach/pusher.env with MONEY_URL= and MONEY_TOKEN= (mode 600).
 set -euo pipefail
@@ -16,7 +16,7 @@ cat > "$plist" <<PLIST
   <key>Label</key><string>$label</string>
   <key>ProgramArguments</key><array><string>$py</string><string>$here/push.py</string></array>
   <key>WorkingDirectory</key><string>$here</string>
-  <key>StartInterval</key><integer>1800</integer>
+  <key>StartInterval</key><integer>60</integer>
   <key>RunAtLoad</key><true/>
   <key>StandardOutPath</key><string>$log</string>
   <key>StandardErrorPath</key><string>$log</string>

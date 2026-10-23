@@ -10,6 +10,9 @@ counts) exactly; don't invent your own structure.
 ## Where the data comes from
 - Bank SMS from the iPhone → macOS `chat.db` → `pusher/push.py` (LaunchAgent on the Mac) → the
   server's `/api/ingest`, which reruns `analyzer/pipeline.py`. Components and deploy: `README.md`.
+- The pusher polls every minute; the dashboard's Refresh button only flags a request it picks up
+  (`DATA/refresh-requested`). Failures land in `DATA/last-error.json` and show under the button.
+  "Last refresh" is `dashboard.html`'s mtime (the pipeline's last output), never `sms-export.csv`'s.
 - Prefer the server's MCP tools (`status` first: it says how old the data is). Locally, generated
   files live in `$MONEY_DATA` (default `analyzer/`); check their modification time.
 - `weekly_check` grades the last Sun–Sat week against `WEEKLY_BUDGET` and prints SAFE TO SPEND
