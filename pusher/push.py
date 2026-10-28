@@ -65,9 +65,8 @@ def main():
         finally:
             sys.exit(msg)
     if n < int(os.environ.get("MONEY_MIN_SMS") or 0):
-        msg = f"only {n} SMS in chat.db (< MONEY_MIN_SMS={os.environ['MONEY_MIN_SMS']}): Messages still syncing? not pushed"
-        api("/api/pusher-error", msg.encode())
-        sys.exit(msg)
+        # log only: a standby guest waiting for its first sync must not flag the dashboard every minute
+        sys.exit(f"only {n} SMS in chat.db (< MONEY_MIN_SMS={os.environ['MONEY_MIN_SMS']}): Messages still syncing? not pushed")
     res = api("/api/ingest", gzip.compress(data), timeout=300)
     STAMP.parent.mkdir(parents=True, exist_ok=True)
     STAMP.touch()

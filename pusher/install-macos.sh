@@ -8,6 +8,7 @@ py=${1:-$(command -v python3)}
 label=com.money-coach.pusher
 plist=~/Library/LaunchAgents/$label.plist
 log=~/Library/Logs/money-coach-pusher.log
+mkdir -p ~/Library/LaunchAgents ~/Library/Logs
 [ -f ~/.config/money-coach/pusher.env ] || { echo "missing ~/.config/money-coach/pusher.env" >&2; exit 1; }
 cat > "$plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
