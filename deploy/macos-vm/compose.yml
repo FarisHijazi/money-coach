@@ -1,0 +1,33 @@
+# macOS in a container (github.com/dockur/macos) to run pusher/ when there is no real Mac.
+# Runs on any Linux docker host with /dev/kvm (a Proxmox VM with cpu=host works); it only needs to
+# reach the server over HTTPS, so it does NOT have to be the server's host. Steps: README.md here.
+#   cp .env.example .env && docker compose up -d
+services:
+  macos:
+    image: dockurr/macos:3.12
+    container_name: macos
+    environment:
+      VERSION: "15"
+      RAM_SIZE: ${RAM_SIZE:-6G}
+      CPU_CORES: ${CPU_CORES:-4}
+      DISK_SIZE: ${DISK_SIZE:-96G}
+      # iCloud/Messages sign-in wants a unique, valid-looking serial set. Empty = dockur generates
+      # one; if sign-in fails, set values from GenSMBIOS (README.md here).
+      SN: ${SN:-}
+      MLB: ${MLB:-}
+      UUID: ${UUID:-}
+    devices:
+      - /dev/kvm
+      - /dev/net/tun
+    cap_add:
+      - NET_ADMIN
+    ports:
+      # web console (noVNC), raw VNC and the guest's SSH (Remote Login), none with auth of its own:
+      # bind to a LAN/tailnet-only address, never a public one
+      - ${BIND:-127.0.0.1}:8006:8006
+      - ${BIND:-127.0.0.1}:5900:5900
+      - ${BIND:-127.0.0.1}:2222:22
+    volumes:
+      - ./storage:/storage
+    restart: unless-stopped
+    stop_grace_period: 2m

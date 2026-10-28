@@ -1,5 +1,5 @@
 # The server: analyzer + MCP/web app. The pusher is NOT in here — it must run on a Mac (or the
-# `macos` compose profile) because it reads the Messages database.
+# deploy/macos-vm/ container) because it reads the Messages database.
 FROM astral/uv:0.9.30-python3.12-bookworm-slim
 WORKDIR /app
 COPY server/pyproject.toml server/uv.lock server/

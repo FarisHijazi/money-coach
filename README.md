@@ -21,7 +21,7 @@ Emirates NBD, meem. Supported statements: Riyad, Rajhi, SNB, SAB, ANB.
 
 | Dir | What | Runs on |
 |---|---|---|
-| `pusher/` | `export_sms.py` reads `~/Library/Messages/chat.db`; `push.py` gzips all SMS and POSTs them. Stdlib only. | a real Mac, or the `macos` compose profile |
+| `pusher/` | `export_sms.py` reads `~/Library/Messages/chat.db`; `push.py` gzips all SMS and POSTs them. Stdlib only. | a real Mac, or `deploy/macos-vm/` |
 | `analyzer/` | The parsers, categorizer, dashboard builder and weekly check. Stdlib only (PDF statement parsers also need `pdfplumber` / `pdftotext`). | anywhere; inside the server image |
 | `server/` | `app.py`: one process serving ingest, the dashboard UI and MCP (`mcp` SDK). `smoke_test.py` checks a running server end to end. | Docker |
 
@@ -88,9 +88,11 @@ server cannot read SMS itself, so Refresh only flags a request (`POST /refresh`)
 `/api/refresh-wanted` every minute and pushes. Pipeline failures and errors the pusher reports
 (`/api/pusher-error`) show under the button; so does a request the Mac has not picked up in 3 min.
 
-**No Mac?** `docker compose --profile macos up -d` adds a macOS VM
-([dockur/macos](https://github.com/dockur/macos), needs `/dev/kvm`) with `pusher/` shared in.
-Steps are in `compose.yml`. Apple may block iCloud sign-in in a VM, so a real Mac is the reliable path.
+**No Mac?** `deploy/macos-vm/` runs macOS in a container ([dockur/macos](https://github.com/dockur/macos),
+any Linux host with `/dev/kvm`, not necessarily the server's) and installs the pusher into it over SSH.
+Set `MONEY_MIN_SMS` in its `pusher.env`: each push replaces the server's SMS set, so the guard keeps a
+guest whose Messages are still syncing from wiping the ledger. Apple may block iCloud sign-in in a
+VM, so a real Mac is the reliable path. Steps: `deploy/macos-vm/README.md`.
 
 ## Pipeline (local, without the server)
 

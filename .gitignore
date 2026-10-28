@@ -25,7 +25,8 @@ __pycache__/
 
 # Deploy-local
 data/
-macos/
+deploy/macos-vm/storage/
+deploy/macos-vm/pusher.env
 .env
 compose.override.yml
 **/.venv/
