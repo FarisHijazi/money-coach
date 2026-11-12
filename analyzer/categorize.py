@@ -70,7 +70,7 @@ def foreign(text):
 
 
 def category(x):
-    if any(re.search(p, x["text"]) for p in P.ONE_OFF_TX):
+    if any(re.search(p, x["text"]) for p in getattr(P, "ONE_OFF_TX", ())):
         return "One-off purchase"
     if x["sub"] == "atm" and x["datetime"][:10] in P.ONE_OFF_ATM_DATES:
         return P.ONE_OFF_LABEL
