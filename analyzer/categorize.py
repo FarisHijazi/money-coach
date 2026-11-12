@@ -32,7 +32,7 @@ GROUP = {
     "AI & software subs": "Life admin", "Laundry & home services": "Life admin",
     "Transfers to people": "People & giving", "Family & gifts": "People & giving", "Charity": "People & giving",
     "Gifts & flowers": "People & giving", "Cash withdrawals": "People & giving",
-    "Fun & events": "Fun", P.ONE_OFF_LABEL: "One-offs", "Other / unknown": "Unknown",
+    "Fun & events": "Fun", P.ONE_OFF_LABEL: "One-offs", "One-off purchase": "One-offs", "Other / unknown": "Unknown",
 }
 
 # Display only: names stay plain everywhere they are matched (budgets, weekly check, colors).
@@ -44,7 +44,7 @@ ICONS = {
     "Bills (power, phone, fines)": "🧾", "Gov, rent fees & telecom": "🏛️", "Laundry & home services": "🧺",
     "Bank fees": "🏦", "Transfers to people": "💸", "Family & gifts": "👨‍👩‍👧", "Gifts & flowers": "💐",
     "Charity": "🤲", "Cash withdrawals": "💵", "Fun & events": "🎉", "Loans": "📉", "Rent": "🏠",
-    "Other / unknown": "❓", P.SPOUSE_LABEL: "💍", P.ONE_OFF_LABEL: "🎁",
+    "Other / unknown": "❓", P.SPOUSE_LABEL: "💍", P.ONE_OFF_LABEL: "🎁", "One-off purchase": "🎁",
     # dashboard groups
     "Shopping": "🛍️", "Food": "🍔", "Life admin": "🗂️", "People & giving": "🤝", "Fun": "🎉",
     "One-offs": "🎁", "Unknown": "❓", P.SPOUSE_GROUP: "💍",
@@ -70,6 +70,8 @@ def foreign(text):
 
 
 def category(x):
+    if any(re.search(p, x["text"]) for p in P.ONE_OFF_TX):
+        return "One-off purchase"
     if x["sub"] == "atm" and x["datetime"][:10] in P.ONE_OFF_ATM_DATES:
         return P.ONE_OFF_LABEL
     if x["sub"] == "atm":

@@ -32,6 +32,7 @@ WINDOW = ("2026-01", date.today().strftime("%Y-%m"))  # months averaged in summa
 SPOUSE_LABEL = "Spouse (allowance + house)"  # category of transfers to SPOUSE
 SPOUSE_GROUP = "Spouse"                      # dashboard group for SPOUSE_LABEL
 ONE_OFF_ATM_DATES = ()  # ATM withdrawals on these dates are a one-off purchase, not cash spending
+ONE_OFF_TX = ()  # regexes on SMS text: purchases that are one-offs, kept out of the daily pace
 ONE_OFF_LABEL = "One-off purchase"
 CATS = [  # first match wins; regex on merchant + SMS text
     ("Home lab / gadgets", r"EXTRA|JARIR|APPLE STORE"),
